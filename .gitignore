@@ -1,0 +1,4 @@
+# IDEs and editors
+.vs/
+bin/
+obj/
