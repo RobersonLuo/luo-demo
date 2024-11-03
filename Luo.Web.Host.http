@@ -1,0 +1,13 @@
+﻿@Luo.Web.Host_HostAddress = http://localhost:5037
+
+POST {{Luo.Web.Host_HostAddress}}/customer/0/score/0
+
+###
+
+GET {{Luo.Web.Host_HostAddress}}/leaderboard?start=0&end=0
+
+###
+
+GET {{Luo.Web.Host_HostAddress}}/leaderboard/0
+
+###

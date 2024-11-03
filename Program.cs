@@ -1,5 +1,6 @@
+using Luo.Web.Host.Services;
 
-namespace LuoDemo
+namespace Luo.Web.Host
 {
     public class Program
     {
@@ -10,6 +11,10 @@ namespace LuoDemo
             // Add services to the container.
 
             builder.Services.AddControllers();
+
+            //inject service
+            builder.Services.AddScoped<ICustomerService, CustomerService>();
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();

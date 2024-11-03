@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuoDemo", "LuoDemo.csproj", "{25FA76BE-88C4-420F-A02A-495DB336CAC9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luo.Web.Host", "Luo.Web.Host.csproj", "{25FA76BE-88C4-420F-A02A-495DB336CAC9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
