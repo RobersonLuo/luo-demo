@@ -14,6 +14,7 @@ namespace Luo.Web.Host
 
             //inject service
             builder.Services.AddScoped<ICustomerService, CustomerService>();
+            builder.Services.AddMemoryCache();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

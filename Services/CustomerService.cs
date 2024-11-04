@@ -1,14 +1,18 @@
 ﻿using Luo.Web.Host.Models;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Luo.Web.Host.Services;
 
 /// <summary>
 /// Customer Service
 /// </summary>
-public class CustomerService : ICustomerService
+/// <param name="cache"></param>
+public class CustomerService(IMemoryCache cache) : ICustomerService
 {
     private static readonly Dictionary<long, Customer> _customers = [];
-    private static readonly List<LeaderBoard> _leaderBoards = [];
+
+    const string CACHE_KEY = "leaderboard";
+    private readonly IMemoryCache _cache = cache;
 
     /// <summary>
     /// add customer data for test
@@ -40,8 +44,9 @@ public class CustomerService : ICustomerService
     /// <returns>the customer's current score</returns>
     public async Task<decimal> UpdateScoreAsync(long cusomerId, decimal score)
     {
-        //Add customer first if it not found; otherwise, update it's score
         decimal currentScore;
+
+        //Add customer first if it not found; otherwise, update it's score
         if (!_customers.TryGetValue(cusomerId, out Customer? value))
         {
             _customers.Add(cusomerId, new Customer() { CustomerId = cusomerId, Score = score });
@@ -53,34 +58,10 @@ public class CustomerService : ICustomerService
             currentScore = value.Score;
         }
 
-        //do ranking
+        //do ranking after score changed
         await DoRankingAsync();
 
         return currentScore;
-    }
-
-    /// <summary>
-    /// Do ranking by the updated customer score.
-    /// Note: All customers whose score is greater than zero participate in a competition.
-    /// </summary>
-    private static async Task DoRankingAsync()
-    {
-        //use 'task.delay' to simulating asynchronous opterations
-        await Task.Delay(1);
-
-        //do ranking
-        var items = _customers.Values.Where(e => e.Score > 0)
-            .OrderByDescending(e => e.Score)
-            .ThenBy(e => e.CustomerId)
-            .Select((c, idx) => new LeaderBoard
-            {
-                CustomerId = c.CustomerId,
-                Score = c.Score,
-                Rank = idx + 1
-            }).ToList();
-
-        _leaderBoards.Clear();
-        _leaderBoards.AddRange(items);
     }
 
     /// <summary>
@@ -100,13 +81,19 @@ public class CustomerService : ICustomerService
             return [];
         }
 
+        List<LeaderBoard> data = [];
+        if (_cache.TryGetValue(CACHE_KEY, out List<LeaderBoard>? value))
+        {
+            data = value ?? [];
+        }
+
         //ignore the 'end' condition if parameter 'end' not exist (no value inputed).
         if (end == 0)
         {
-            return _leaderBoards.Where(e => e.Rank >= start).ToList();
+            return data.Where(e => e.Rank >= start).ToList();
         }
 
-        return _leaderBoards.Where(e => e.Rank >= start && e.Rank <= end).ToList();
+        return data.Where(e => e.Rank >= start && e.Rank <= end).ToList();
     }
 
     /// <summary>
@@ -121,23 +108,59 @@ public class CustomerService : ICustomerService
         //use 'task.delay' to simulating asynchronous opterations
         await Task.Delay(1);
 
-        var find = _leaderBoards.Find(e => e.CustomerId == customerId);
+        List<LeaderBoard> data = [];
+        if (_cache.TryGetValue(CACHE_KEY, out List<LeaderBoard>? value))
+        {
+            data = value ?? [];
+        }
+
+        var find = data.Find(e => e.CustomerId == customerId);
         if (find == null) { return []; }
 
         var list = new List<LeaderBoard>();
         if (high > 0)
         {
             //add the upper rank neighours
-            list.AddRange(_leaderBoards.Where(e => e.Rank >= (find.Rank - high) && e.Rank < find.Rank));
+            list.AddRange(data.Where(e => e.Rank >= (find.Rank - high) && e.Rank < find.Rank));
         }
         //add itself
         list.Add(find);
         if (low > 0)
         {
             //add the lower rank neighours if exist
-            list.AddRange(_leaderBoards.Where(e => e.Rank > find.Rank && e.Rank <= (find.Rank + low)));
+            list.AddRange(data.Where(e => e.Rank > find.Rank && e.Rank <= (find.Rank + low)));
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// Do ranking by the updated customer score.
+    /// Note: All customers whose score is greater than zero participate in a competition.
+    /// </summary>
+    private async Task DoRankingAsync()
+    {
+        //use 'task.delay' to simulating asynchronous opterations
+        await Task.Delay(1);
+
+        //do ranking
+        var data = _customers.Values.Where(e => e.Score > 0)
+            .OrderByDescending(e => e.Score)
+            .ThenBy(e => e.CustomerId)
+            .Select((c, idx) => new LeaderBoard
+            {
+                CustomerId = c.CustomerId,
+                Score = c.Score,
+                Rank = idx + 1
+            }).ToList();
+
+        //cache leaderboard data
+        if (_cache.TryGetValue(CACHE_KEY, out List<LeaderBoard>? value))
+        {
+            //clear cache data if exsit
+            _cache.Remove(CACHE_KEY);
+        }
+        //var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(10) };
+        _cache.Set(CACHE_KEY, data);
     }
 }
