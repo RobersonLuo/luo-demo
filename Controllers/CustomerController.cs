@@ -7,8 +7,7 @@ namespace Luo.Web.Host.Controllers;
 /// Customer Web Api
 /// </summary>
 /// <param name="customerService"></param>
-[ApiController]
-[Route("customer/")]
+[Route("customer")]
 public class CustomerController(ICustomerService customerService) : ControllerBase
 {
     private readonly ICustomerService _customerService = customerService;
@@ -16,7 +15,7 @@ public class CustomerController(ICustomerService customerService) : ControllerBa
     /// <summary>
     /// add customer data for test
     /// </summary>
-    [HttpPost, Route("add-test-data")]
+    [HttpPost("add-test-data")]
     public bool AddCustomers4Test()
     {
         return _customerService.AddCustomers4Test();
@@ -25,12 +24,12 @@ public class CustomerController(ICustomerService customerService) : ControllerBa
     /// <summary>
     /// update customer score
     /// </summary>
-    /// <param name="customerId"></param>
+    /// <param name="customerid"></param>
     /// <param name="score"></param>
     /// <returns></returns>
-    [HttpPost, Route("{customerId}/score/{score}")]
-    public Task<decimal> UpdateScore(long customerId, decimal score)
+    [HttpPost("{customerid:long:min(1)}/score/{score:decimal}")]
+    public Task<decimal> UpdateScore(long customerid, decimal score)
     {
-        return _customerService.UpdateScoreAsync(customerId, score);
+        return _customerService.UpdateScoreAsync(customerid, score);
     }
 }

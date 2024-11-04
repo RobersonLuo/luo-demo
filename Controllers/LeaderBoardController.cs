@@ -8,7 +8,7 @@ namespace Luo.Web.Host.Controllers;
 /// LeaderBoard Web Api
 /// </summary>
 /// <param name="customerService"></param>
-[Route("leaderboard/")]
+[Route("leaderboard")]
 public class LeaderBoardController(ICustomerService customerService) : ControllerBase
 {
     private readonly ICustomerService _customerService = customerService;
@@ -28,13 +28,13 @@ public class LeaderBoardController(ICustomerService customerService) : Controlle
     /// <summary>
     /// Get the customer's leaderboards and it's neighbours according to the low or high number.
     /// </summary>
-    /// <param name="customerId"></param>
+    /// <param name="customerid"></param>
     /// <param name="high"> number of neighbors whose rank is higher than the specified customer</param>
     /// <param name="low">number of neighbors whose rank is lower than the specified customer</param>
     /// <returns>the found customer's leaderboard and it's neighbours</returns>
-    [HttpGet, Route("{customerId}")]
-    public Task<List<LeaderBoard>> GetLeaderBoardsWithNeighboursByRank(long customerId, int high = 0, int low = 0)
+    [HttpGet("{customerid:long:min(1)}")]
+    public Task<List<LeaderBoard>> GetLeaderBoardsWithNeighboursByRank(long customerid, int high = 0, int low = 0)
     {
-        return _customerService.GetLeaderBoardsWithNeighboursByRankAsync(customerId, high, low);
+        return _customerService.GetLeaderBoardsWithNeighboursByRankAsync(customerid, high, low);
     }
 }
