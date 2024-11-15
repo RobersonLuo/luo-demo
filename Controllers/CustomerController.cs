@@ -15,10 +15,11 @@ public class CustomerController(ICustomerService customerService) : ControllerBa
     /// <summary>
     /// add customer data for test
     /// </summary>
-    [HttpPost("add-test-data")]
-    public bool AddCustomers4Test()
+    /// <param name="count">customer count</param>
+    [HttpPost("add-test-data/{count:int:min(1)}")]
+    public Task AddCustomers4Test(int count)
     {
-        return _customerService.AddCustomers4Test();
+        return _customerService.AddCustomers4TestAsync(count);
     }
 
     /// <summary>

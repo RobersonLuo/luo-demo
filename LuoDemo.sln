@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luo.Web.Host", "Luo.Web.Host.csproj", "{25FA76BE-88C4-420F-A02A-495DB336CAC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Luo.Web.Host", "Luo.Web.Host.csproj", "{25FA76BE-88C4-420F-A02A-495DB336CAC9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E26F9F1E-9F89-42D0-8025-764AC724362A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,6 +20,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{25FA76BE-88C4-420F-A02A-495DB336CAC9} = {E26F9F1E-9F89-42D0-8025-764AC724362A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CB7B23A8-6958-4605-910C-CC64930CBB38}

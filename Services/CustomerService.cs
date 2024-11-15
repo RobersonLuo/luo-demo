@@ -1,5 +1,6 @@
-﻿using Luo.Web.Host.Models;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Luo.Web.Host.Extensions;
+using Luo.Web.Host.Models;
+using System.Diagnostics;
 
 namespace Luo.Web.Host.Services;
 
@@ -7,61 +8,79 @@ namespace Luo.Web.Host.Services;
 /// Customer Service
 /// </summary>
 /// <param name="cache"></param>
-public class CustomerService(IMemoryCache cache) : ICustomerService
+public class CustomerService() : ICustomerService
 {
-    private static readonly Dictionary<long, Customer> _customers = [];
+    private static readonly SkipList _data = new(15);
+    //for test: allow a lost of  requests for updating customer score
+    private static readonly List<long> _dataIds = [];
 
-    const string CACHE_KEY = "leaderboard";
-    private readonly IMemoryCache _cache = cache;
 
     /// <summary>
     /// add customer data for test
     /// </summary>
-    public bool AddCustomers4Test()
+    public async Task AddCustomers4TestAsync(int count)
     {
-        if (_customers.Count == 0)
-        {
-            _customers.Add(15514665, new Customer { CustomerId = 15514665, Score = 124 });
-            _customers.Add(81546541, new Customer { CustomerId = 81546541, Score = 113 });
-            _customers.Add(1745431, new Customer { CustomerId = 1745431, Score = 100 });
-            _customers.Add(76786448, new Customer { CustomerId = 76786448, Score = 100 });
-            _customers.Add(254814111, new Customer { CustomerId = 254814111, Score = 96 });
-            _customers.Add(53274324, new Customer { CustomerId = 53274324, Score = 95 });
-            _customers.Add(6144320, new Customer { CustomerId = 6144320, Score = 93 });
-            _customers.Add(8009471, new Customer { CustomerId = 8009471, Score = 93 });
-            _customers.Add(11028481, new Customer { CustomerId = 11028481, Score = 93 });
-            _customers.Add(38819, new Customer { CustomerId = 38819, Score = 92 });
-        }
+        Console.WriteLine();
+        Console.WriteLine("---------------begin create customers------------------------------");
 
-        return true;
+        //---Test 1: simple case
+        //_data.Insert(new Customer { CustomerId = 1, Score = 124 });
+        //_data.Insert(new Customer { CustomerId = 2, Score = 113 });
+        //_data.Insert(new Customer { CustomerId = 3, Score = 100 });
+        //_data.Insert(new Customer { CustomerId = 4, Score = 100 });
+        //_data.Insert(new Customer { CustomerId = 5, Score = 96 });
+        //_data.Insert(new Customer { CustomerId = 6, Score = 95 });
+        //_data.Insert(new Customer { CustomerId = 7, Score = 93 });
+        //_data.Insert(new Customer { CustomerId = 8, Score = 93 });
+        //_data.Insert(new Customer { CustomerId = 9, Score = 93 });
+        //_data.Insert(new Customer { CustomerId = 10, Score = 92 });
+
+        //Test 2: handle lots of customers (add) and a lot of simultaneous requests (update score)
+        Random rnd = new();
+        int numCount = count;
+        int numRange = 500;
+
+        long start = Stopwatch.GetTimestamp();
+        for (int i = 0; i < numCount; i++)
+        {
+            int customerId = rnd.Next();
+            int score = rnd.Next(1, numRange);
+            _data.Insert(new Customer { CustomerId = customerId, Score = score });
+            _dataIds.Add(customerId);
+        }
+        long end = Stopwatch.GetTimestamp();
+
+        Console.WriteLine($"{numCount} customers created and elapsed: {Stopwatch.GetElapsedTime(start, end).TotalMilliseconds} ms");
+        Console.WriteLine();
+
+        _data.PrintList();
+
+        Console.WriteLine("---------------begin update customers's score------------------------------");
+        start = Stopwatch.GetTimestamp();
+
+        //requests all in parallel at the same time.
+        //request of update score
+        var tasks = _dataIds.Select(e => UpdateScoreAsync(e, rnd.NextDecimal(-1000, 1000)));
+        var newScores = await Task.WhenAll(tasks);
+
+        end = Stopwatch.GetTimestamp();
+        Console.WriteLine();
+
+        Console.WriteLine($"--------{_dataIds.Count} customers's score updated and elapsed: {Stopwatch.GetElapsedTime(start, end).TotalMilliseconds} ms");
+        Console.WriteLine();
     }
 
     /// <summary>
-    /// update customer score
+    /// update the customer's score
     /// </summary>
     /// <param name="cusomerId"></param>
     /// <param name="score"></param>
-    /// <returns>the customer's current score</returns>
+    /// <returns>the updated score of the customer</returns>
     public async Task<decimal> UpdateScoreAsync(long cusomerId, decimal score)
     {
-        decimal currentScore;
-
-        //Add customer first if it not found; otherwise, update it's score
-        if (!_customers.TryGetValue(cusomerId, out Customer? value))
-        {
-            _customers.Add(cusomerId, new Customer() { CustomerId = cusomerId, Score = score });
-            currentScore = score;
-        }
-        else
-        {
-            value.Score += score;
-            currentScore = value.Score;
-        }
-
-        //do ranking after score changed
-        await DoRankingAsync();
-
-        return currentScore;
+        //use 'task.delay' to simulating asynchronous opterations
+        await Task.Delay(1);
+        return _data.UpdateScore(cusomerId, score);
     }
 
     /// <summary>
@@ -75,25 +94,17 @@ public class CustomerService(IMemoryCache cache) : ICustomerService
         //use 'task.delay' to simulating asynchronous opterations
         await Task.Delay(1);
 
-        //if the parameters 'start' and 'end' not exist at the same time, return empty;
-        if (start <= 0 && end <= 0)
+        if (start <= 0) { start = 0; }
+        if (end <= 0) { end = 0; }
+
+        // if the parameters 'start' and 'end' not exist at the same time, return empty;
+        // 'start' should not greater than 'end'
+        if ((start <= 0 && end <= 0) || (start > end))
         {
             return [];
         }
 
-        List<LeaderBoard> data = [];
-        if (_cache.TryGetValue(CACHE_KEY, out List<LeaderBoard>? value))
-        {
-            data = value ?? [];
-        }
-
-        //ignore the 'end' condition if parameter 'end' not exist (no value inputed).
-        if (end == 0)
-        {
-            return data.Where(e => e.Rank >= start).ToList();
-        }
-
-        return data.Where(e => e.Rank >= start && e.Rank <= end).ToList();
+        return _data.GetNodesByRankingRegion(start, end);
     }
 
     /// <summary>
@@ -108,59 +119,15 @@ public class CustomerService(IMemoryCache cache) : ICustomerService
         //use 'task.delay' to simulating asynchronous opterations
         await Task.Delay(1);
 
-        List<LeaderBoard> data = [];
-        if (_cache.TryGetValue(CACHE_KEY, out List<LeaderBoard>? value))
-        {
-            data = value ?? [];
-        }
+        if (high <= 0) { high = 0; }
+        if (low <= 0) { low = 0; }
 
-        var find = data.Find(e => e.CustomerId == customerId);
-        if (find == null) { return []; }
+        int currentRank = _data.GetRanking(customerId);
+        if (currentRank == 0) { return []; }
 
-        var list = new List<LeaderBoard>();
-        if (high > 0)
-        {
-            //add the upper rank neighours
-            list.AddRange(data.Where(e => e.Rank >= (find.Rank - high) && e.Rank < find.Rank));
-        }
-        //add itself
-        list.Add(find);
-        if (low > 0)
-        {
-            //add the lower rank neighours if exist
-            list.AddRange(data.Where(e => e.Rank > find.Rank && e.Rank <= (find.Rank + low)));
-        }
+        int start = currentRank - high;
+        int end = currentRank + low;
 
-        return list;
-    }
-
-    /// <summary>
-    /// Do ranking by the updated customer score.
-    /// Note: All customers whose score is greater than zero participate in a competition.
-    /// </summary>
-    private async Task DoRankingAsync()
-    {
-        //use 'task.delay' to simulating asynchronous opterations
-        await Task.Delay(1);
-
-        //do ranking
-        var data = _customers.Values.Where(e => e.Score > 0)
-            .OrderByDescending(e => e.Score)
-            .ThenBy(e => e.CustomerId)
-            .Select((c, idx) => new LeaderBoard
-            {
-                CustomerId = c.CustomerId,
-                Score = c.Score,
-                Rank = idx + 1
-            }).ToList();
-
-        //cache leaderboard data
-        if (_cache.TryGetValue(CACHE_KEY, out List<LeaderBoard>? value))
-        {
-            //clear cache data if exsit
-            _cache.Remove(CACHE_KEY);
-        }
-        //var cacheOptions = new MemoryCacheOptions() { ExpirationScanFrequency = TimeSpan.FromMinutes(10) };
-        _cache.Set(CACHE_KEY, data);
+        return _data.GetNodesByRankingRegion(start, end);
     }
 }

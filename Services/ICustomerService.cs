@@ -7,7 +7,7 @@ public interface ICustomerService
     /// <summary>
     /// add customer data for test
     /// </summary>
-    bool AddCustomers4Test();
+    Task AddCustomers4TestAsync(int count);
 
     /// <summary>
     /// update customer score
